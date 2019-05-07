@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#define MAX 4096
+#define MAX 512
 #define FIFO "/tmp/so"
 
 
@@ -19,11 +19,10 @@ struct stock
 };
 typedef struct stock* mStock;
 
-int show(int codigo) {
+void show(int codigo, char* messageToClient) {
 	
 	int f;
 	mStock estrutura = malloc(sizeof(struct stock));
-
 	if((f = open("STOCKS", O_RDONLY)) == -1)
 	{
 		perror("open");
@@ -34,10 +33,10 @@ int show(int codigo) {
 	read(f,estrutura,sizeof(struct stock));
 	close(f);
 
-	return estrutura->qtd;
+	snprintf(messageToClient, MAX, "Quantidade em stock: %d", estrutura->qtd);
 }
 
-int atualiza(int codigo, int quantidade)
+void atualiza(int codigo, int quantidade, char* messageToClient)
 {
 	int f;
 	mStock estrutura = malloc(sizeof(struct stock));
@@ -52,66 +51,71 @@ int atualiza(int codigo, int quantidade)
 	lseek(f, sizeof(struct stock) * (codigo-1), SEEK_SET);
 	read(f,estrutura,sizeof(struct stock));
 	
+	printf(" qunt %d\n", quantidade);				
 	estrutura->qtd += quantidade;
-	
+
 	lseek(f, sizeof(struct stock) * (codigo-1), SEEK_SET);
 	write(f, estrutura, sizeof(struct stock));
 	close(f);
 
-	return estrutura->qtd;
+	snprintf(messageToClient, MAX, "Novo stock do produto %d: %d", estrutura->cod, estrutura->qtd);
 }
 
-int main(int argc, char *argv[])
+int main()
 {
-	char* clientFIFO = malloc(sizeof(char*));
+	char* clientFIFO = malloc(sizeof(char*)*100);
 	int option;
 	int codigo;
 	int quantidade;
 	int res;
 	int fromClient;
 	int toClient;
-	char* messageFromClient = malloc(sizeof(char*));
-	char* messageToClient = malloc(sizeof(char*));
+	char messageFromClient[MAX];
+	char messageToClient[MAX];
 	
 	if(access(FIFO, R_OK) == -1){
 		if(mkfifo(FIFO, 0644) != 0){
-			perror("criacao fifo");
+			perror("criacao fifo server");
 			exit(-1);
 		}
 	}
 
+	while(1){
+		fromClient = open(FIFO, O_RDONLY);
+		read(fromClient, messageFromClient,MAX);
+		close(fromClient);
+		printf("ms %s\n",messageFromClient);
 	
-	fromClient = open(FIFO, O_RDONLY, 0444);
-	read(fromClient, messageFromClient, MAX);
-	close(fromClient);
+		clientFIFO = strtok(messageFromClient, ";");
+		if(access(clientFIFO, W_OK) == -1)
+		{
+			perror("acesso fifo client");
+			exit(-1);
+		}
 
-	clientFIFO = strtok(messageFromClient, ";");
-	if(access(clientFIFO, W_OK) == -1)
-	{
-		perror("acesso fifo");
-		exit(-1);
+		option = atoi(strtok(NULL,";"));
+		codigo = atoi(strtok(NULL,";"));
+		switch(option)
+		{
+			case 0:
+			case 1: perror("Poucos argumentos"); exit(-1);
+			case 2: show(codigo, messageToClient);
+					break;
+			case 3: quantidade = atoi(strtok(NULL,";"));
+					printf("x %d\n", quantidade );
+					atualiza(codigo, quantidade, messageToClient);
+					break;
+			default: perror("Demasiados argumentos"); exit(-1);
+		}
+
+		if((toClient = open(clientFIFO, O_WRONLY)) == -1){
+			perror("abertura fifo");
+			exit(-1);
+		}
+
+		write(toClient, messageToClient, MAX);
+		close(toClient);
 	}
-
-	option = atoi(strtok(NULL,";"));
-	switch(option)
-	{
-		case 0:
-		case 1: perror("Poucos argumentos"); exit(-1);
-		case 2: codigo = atoi(strtok(NULL,";"));
-				res = show(codigo);
-				snprintf(messageToClient, MAX, "Quantidade em stock: %d", res);
-				break;
-		case 3: codigo = atoi(strtok(NULL,";"));
-				quantidade = atoi(strtok(NULL,";"));
-				res = atualiza(codigo, quantidade);
-				snprintf(messageToClient, MAX, "Novo stock: %d", res);
-				break;
-		default: perror("Demasiados argumentos"); exit(-1);
-	}
-
-	toClient = open(clientFIFO, O_WRONLY, 0444);
-	write(toClient, messageToClient, strlen(messageToClient));
-	close(toClient);
 
 	return 0;
 }
