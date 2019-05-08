@@ -29,38 +29,37 @@ typedef struct stock* mStock;
 
 int insere(char* nome, double preco){
 	
-	int f, fStr, fStk;
-	mArtigo estrutura = malloc(sizeof(struct artigo));
+	int fArt, fStr, fStk;
+	mArtigo artigo = malloc(sizeof(struct artigo));
 	mStock stock = malloc(sizeof(struct stock));
 
-	if((fStr = open("STRINGS", O_RDONLY)) == -1)
+	if((fStr = open("STRINGS", O_WRONLY, O_APPEND)) == -1)
 	{
 		perror("open");
 		exit(-1);
 	}
-	lseek(fStr,0,SEEK_END);
 	write(fStr,nome,strlen(nome));
 	close(fStr);
 
-	if((f = open("ARTIGOS", O_RDWR, O_APPEND)) == -1)
+	if((fArt = open("ARTIGOS", O_RDWR)) == -1)
 	{
 		perror("open");
 		exit(-1);
 	}
 
-	lseek(f, -(sizeof(struct artigo)), SEEK_END);
-	read(f, estrutura, sizeof(struct artigo));
+	lseek(fArt, -sizeof(struct artigo), SEEK_END);
+	read(fArt, artigo, sizeof(struct artigo));
 
-	estrutura->cod++;
-	estrutura->preco = preco;
-	estrutura->strPos += estrutura->tamanhoStr;
-	estrutura->tamanhoStr = strlen(nome);
+	artigo->cod++;
+	artigo->preco = preco;
+	artigo->strPos += artigo->tamanhoStr;
+	artigo->tamanhoStr = strlen(nome);
 
-	lseek(f,0,SEEK_END);
-	write(f,estrutura,sizeof(struct artigo));
-	close(f);
+	lseek(fArt,0,SEEK_END);
+	write(fArt,artigo,sizeof(struct artigo));
+	close(fArt);
 
-	stock->cod = estrutura->cod;
+	stock->cod = artigo->cod;
 	stock->qtd = 1; 
 
 	if((fStk = open("STOCKS", O_WRONLY, O_APPEND)) == 0)
@@ -71,10 +70,31 @@ int insere(char* nome, double preco){
 	write(fStk, stock, sizeof(struct stock));
 	close(fStk);
 
-	return estrutura->cod;
+	return artigo->cod;
 }
 
-int alteraNome(){
+char* alteraNome(int codigo, char* nome){
+
+	int fArt, fStr;
+	mArtigo artigo = malloc(sizeof(struct artigo));
+
+	if((fArt = open("ARTIGOS", O_RDWR)) == -1){
+		perror("open");
+		exit(-1);
+	}
+	lseek(fArt, sizeof(struct artigo)*(codigo-1), SEEK_SET);
+	read(fArt, artigo, sizeof(struct artigo));
+	close(fArt);
+
+	if((fStr = open("STRINGS", O_RDWR, O_APPEND)) == -1){
+		perror("open");
+		exit(-1);
+	}
+	lseek(fStr, artigo->strPos, sizeof(nome));
+	write(fStr, nome, sizeof(nome));
+	close(fStr);
+
+	return 0;
 
 }
 
@@ -90,6 +110,7 @@ void readLn(int file, char *buffer, int lim)
 int main(){
 
 	int res;
+	char* nome;
 	char buffer[20];
 	char* primeiro = malloc(sizeof(char) * 10);
 	char* segundo = malloc(sizeof(char) * 10);
@@ -106,10 +127,10 @@ int main(){
 	{
 		
 		case 0: perror("Poucos argumentos"); exit(-1);
-		case 'i': res = insere(segundo,atoi(terceiro));
+		case 'i': res = insere(segundo,atof(terceiro));
 				  printf("Codigo do artigo: %d\n", res);
 				  break;
-		case 'n':
+		case 'n': alteraNome(atoi(segundo),terceiro);
 				  break;
 		case 'p':
 				  break;
