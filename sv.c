@@ -50,8 +50,7 @@ void atualiza(int codigo, int quantidade, char* messageToClient)
 	
 	lseek(f, sizeof(struct stock) * (codigo-1), SEEK_SET);
 	read(f,estrutura,sizeof(struct stock));
-	
-	printf(" qunt %d\n", quantidade);				
+					
 	estrutura->qtd += quantidade;
 
 	lseek(f, sizeof(struct stock) * (codigo-1), SEEK_SET);
@@ -63,7 +62,7 @@ void atualiza(int codigo, int quantidade, char* messageToClient)
 
 int main()
 {
-	char* clientFIFO = malloc(sizeof(char*)*MAX);
+	char* clientFIFO = malloc(sizeof(char*)*100);
 	int option;
 	int codigo;
 	int quantidade;
@@ -73,6 +72,7 @@ int main()
 	char messageFromClient[MAX];
 	char messageToClient[MAX];
 	
+
 	if(access(FIFO, R_OK) == -1){
 		if(mkfifo(FIFO, 0644) != 0){
 			perror("criacao fifo server");
@@ -80,20 +80,25 @@ int main()
 		}
 	}
 
-	for (int i = 0; i < MAX; ++i)
-	{
-		clientFIFO[i]  = 0;
-		messageFromClient[i]  = 0;
-		messageToClient[i]  = 0;
-	}
+	fromClient = open(FIFO, O_RDONLY);
 
 	while(1){
-		fromClient = open(FIFO, O_RDONLY);
+		//for (int i = 0; i < MAX; ++i)
+		//{
+		//	clientFIFO[i]  = 0;
+		//	messageFromClient[i]  = 0;
+		//	messageToClient[i]  = 0;
+		//}
+		memset(clientFIFO, 0, 100);
+		memset(messageFromClient, 0, MAX);
+		memset(messageToClient, 0, MAX);
+		
 		read(fromClient, messageFromClient,MAX);
-		close(fromClient);
-		printf("ms %s\n",messageFromClient);
-	
+		printf("%s\n",messageFromClient );
+		
 		clientFIFO = strtok(messageFromClient, ";");
+		printf("%s\n", clientFIFO );
+
 		if(access(clientFIFO, W_OK) == -1)
 		{
 			perror("acesso fifo client");
@@ -102,12 +107,12 @@ int main()
 
 		option = atoi(strtok(NULL,";"));
 		codigo = atoi(strtok(NULL,";"));
+
 		switch(option)
 		{
 			case 0:	show(codigo, messageToClient);
 					break;
 			case 1: quantidade = atoi(strtok(NULL,";"));
-					printf("x %d\n", quantidade );
 					atualiza(codigo, quantidade, messageToClient);
 					break;
 			case 2: 
@@ -123,6 +128,6 @@ int main()
 		write(toClient, messageToClient, MAX);
 		close(toClient);
 	}
-
+	close(fromClient);
 	return 0;
 }
