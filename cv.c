@@ -78,6 +78,8 @@ int main()
 	char* segundo = malloc(sizeof(char) * 10);
 	
 	while(1){
+		argc = 0;
+		
 		if(readln(0, buffer, 20) == -1)
 				{perror("fim");exit(0);}
 
