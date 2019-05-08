@@ -63,7 +63,7 @@ void atualiza(int codigo, int quantidade, char* messageToClient)
 
 int main()
 {
-	char* clientFIFO = malloc(sizeof(char*)*100);
+	char* clientFIFO = malloc(sizeof(char*)*MAX);
 	int option;
 	int codigo;
 	int quantidade;
@@ -78,6 +78,13 @@ int main()
 			perror("criacao fifo server");
 			exit(-1);
 		}
+	}
+
+	for (int i = 0; i < MAX; ++i)
+	{
+		clientFIFO[i]  = 0;
+		messageFromClient[i]  = 0;
+		messageToClient[i]  = 0;
 	}
 
 	while(1){
@@ -97,14 +104,14 @@ int main()
 		codigo = atoi(strtok(NULL,";"));
 		switch(option)
 		{
-			case 0:
-			case 1: perror("Poucos argumentos"); exit(-1);
-			case 2: show(codigo, messageToClient);
+			case 0:	show(codigo, messageToClient);
 					break;
-			case 3: quantidade = atoi(strtok(NULL,";"));
+			case 1: quantidade = atoi(strtok(NULL,";"));
 					printf("x %d\n", quantidade );
 					atualiza(codigo, quantidade, messageToClient);
 					break;
+			case 2: 
+			case 3: 
 			default: perror("Demasiados argumentos"); exit(-1);
 		}
 
