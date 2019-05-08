@@ -11,6 +11,21 @@
 #define MAX 512
 #define FIFO "/tmp/so"
 
+struct venda
+{
+	int cod;
+	int qtd;
+	double montante;
+};
+typedef struct venda* mVenda;
+
+struct artigo
+{
+	int cod;
+	double preco;
+	int tamanhoStr;
+};
+typedef struct artigo* mArtigo;
 
 struct stock
 {
@@ -41,7 +56,6 @@ void atualiza(int codigo, int quantidade, char* messageToClient)
 	int f;
 	mStock estrutura = malloc(sizeof(struct stock));
 	
-
 	if((f = open("STOCKS", O_RDWR)) == -1)
 	{
 		perror("open");
@@ -50,14 +64,48 @@ void atualiza(int codigo, int quantidade, char* messageToClient)
 	
 	lseek(f, sizeof(struct stock) * (codigo-1), SEEK_SET);
 	read(f,estrutura,sizeof(struct stock));
-					
-	estrutura->qtd += quantidade;
 
-	lseek(f, sizeof(struct stock) * (codigo-1), SEEK_SET);
-	write(f, estrutura, sizeof(struct stock));
-	close(f);
+	if(quantidade >= (-estrutura->qtd))
+	{
+		estrutura->qtd += quantidade;
 
-	snprintf(messageToClient, MAX, "Novo stock do produto %d: %d", estrutura->cod, estrutura->qtd);
+		lseek(f, sizeof(struct stock) * (codigo-1), SEEK_SET);
+		write(f, estrutura, sizeof(struct stock));
+		close(f);
+
+		if(quantidade < 0)
+		{
+			int fVendas, fArt;
+			mVenda venda = malloc(sizeof(struct venda));
+			mArtigo artigo = malloc(sizeof(struct artigo));
+
+			if((fArt = open("ARTIGOS", O_RDWR)) == -1){
+				perror("open");
+				exit(-1);
+			}
+			lseek(fArt, sizeof(struct artigo)*(codigo-1), SEEK_SET);
+			read(fArt, artigo, sizeof(struct artigo));
+			close(fArt);
+
+			venda->cod = codigo;
+			venda->qtd = -quantidade;
+			venda->montante = (venda->qtd)*(artigo->preco);
+			
+			if((fVendas = open("VENDAS", O_WRONLY)) == -1){
+				perror("open");
+				exit(-1);
+			}
+			lseek(fVendas,0,SEEK_END);
+			write(fVendas, venda, sizeof(struct venda));
+			close(fVendas);
+		}
+
+		snprintf(messageToClient, MAX, "Novo stock do produto %d: %d", codigo, estrutura->qtd);
+	}
+	else
+	{
+		snprintf(messageToClient, MAX, "Stock insuficiente para venda!");
+	}
 }
 
 int main()
@@ -80,8 +128,6 @@ int main()
 		}
 	}
 
-	fromClient = open(FIFO, O_RDONLY);
-
 	while(1){
 		//for (int i = 0; i < MAX; ++i)
 		//{
@@ -93,12 +139,11 @@ int main()
 		memset(messageFromClient, 0, MAX);
 		memset(messageToClient, 0, MAX);
 		
+		fromClient = open(FIFO, O_RDONLY);
 		read(fromClient, messageFromClient,MAX);
-		printf("%s\n",messageFromClient );
+		close(fromClient);
 		
 		clientFIFO = strtok(messageFromClient, ";");
-		printf("%s\n", clientFIFO );
-
 		if(access(clientFIFO, W_OK) == -1)
 		{
 			perror("acesso fifo client");
@@ -124,10 +169,8 @@ int main()
 			perror("abertura fifo");
 			exit(-1);
 		}
-
 		write(toClient, messageToClient, MAX);
 		close(toClient);
 	}
-	close(fromClient);
 	return 0;
 }

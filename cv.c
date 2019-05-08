@@ -90,8 +90,6 @@ int main()
 			}
 		}
 
-		toServer = open(FIFO, O_WRONLY);
-
 	while(1){
 		argc = 0;
 		
@@ -122,11 +120,9 @@ int main()
 
 		if(!res)
 		{
-			
-			printf("%s\n", messageToServer);
-			int n= write(toServer,messageToServer,strlen(messageToServer));
-			printf("%d\n", n);
-			
+			toServer = open(FIFO, O_WRONLY);
+			write(toServer,messageToServer,strlen(messageToServer));
+			close(toServer);
 
 			fromServer = open(clientFIFO, O_RDONLY);
 			read(fromServer, messageFromServer, MAX);
@@ -136,6 +132,5 @@ int main()
 			write(1,"\n",1);
 		}
 	}
-	close(toServer);
 	return 0;
 }
