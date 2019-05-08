@@ -9,6 +9,7 @@
 #include <fcntl.h>
 
 #define MAX 512
+#define TAMSTR 32
 #define FIFO "/tmp/so"
 
 struct artigo
@@ -16,7 +17,6 @@ struct artigo
 	int cod;
 	double preco;
 	int tamanhoStr;
-	int strPos;
 };
 typedef struct artigo* mArtigo;
 
@@ -52,7 +52,6 @@ int insere(char* nome, double preco){
 
 	artigo->cod++;
 	artigo->preco = preco;
-	artigo->strPos += artigo->tamanhoStr;
 	artigo->tamanhoStr = strlen(nome);
 
 	lseek(fArt,0,SEEK_END);
@@ -70,8 +69,34 @@ int insere(char* nome, double preco){
 	write(fStk, stock, sizeof(struct stock));
 	close(fStk);
 
+	printf("cod %d\n",artigo->cod);
+	printf("preco %f\n",artigo->preco);
+	printf("tam %d\n",artigo->tamanhoStr);
+
 	return artigo->cod;
 }
+
+/*void testastrings(int codigo)
+{
+	int f, fd;
+	mArtigo estrutura = malloc(sizeof(struct artigo));
+	char string[TAMSTR];
+
+	memset(string,0,TAMSTR);
+ 
+	f = open("STRINGS", O_RDONLY);
+	fd = open("ARTIGOS", O_RDONLY);
+
+	lseek (fd, (codigo-1)*sizeof(struct artigo), SEEK_SET);
+
+	read(fd,estrutura,sizeof(struct artigo));
+
+	lseek (f, TAMSTR * (codigo-1), SEEK_SET);
+
+	read(f,string,TAMSTR);
+	
+	printf("%s\n", string);
+}*/
 
 char* alteraNome(int codigo, char* nome){
 
@@ -84,22 +109,49 @@ char* alteraNome(int codigo, char* nome){
 	}
 	lseek(fArt, sizeof(struct artigo)*(codigo-1), SEEK_SET);
 	read(fArt, artigo, sizeof(struct artigo));
+
+	artigo->tamanhoStr = strlen(nome);
+
+	lseek(fArt, sizeof(struct artigo)*(codigo-1), SEEK_SET);
+	write(fArt, artigo, sizeof(struct artigo));
 	close(fArt);
 
 	if((fStr = open("STRINGS", O_RDWR, O_APPEND)) == -1){
 		perror("open");
 		exit(-1);
 	}
-	lseek(fStr, artigo->strPos, sizeof(nome));
-	write(fStr, nome, sizeof(nome));
+	lseek (fStr, TAMSTR * (codigo-1), SEEK_SET);
+	write(fStr, nome, TAMSTR);
 	close(fStr);
 
-	return 0;
+	//testastrings(codigo);
 
+	return 0;
 }
 
-int alteraPreco(){
+int alteraPreco(int codigo, double preco){
 
+	int fArt;
+	mArtigo artigo = malloc(sizeof(struct artigo));
+
+	if((fArt = open("ARTIGOS", O_RDWR)) == -1)
+	{
+		perror("open");
+		exit(-1);
+	}
+
+	lseek(fArt, (codigo-1)*sizeof(struct artigo), SEEK_SET);
+	read(fArt, artigo, sizeof(struct artigo));
+
+	artigo->preco = preco;
+
+	lseek(fArt, (codigo-1)*sizeof(struct artigo), SEEK_SET);
+	write(fArt,artigo,sizeof(struct artigo));
+	close(fArt);
+
+	//printf("%f\n"artigo->preco);
+
+	return 0;
 }
 
 void readLn(int file, char *buffer, int lim)
@@ -110,7 +162,7 @@ void readLn(int file, char *buffer, int lim)
 int main(){
 
 	int res;
-	char* nome;
+	
 	char buffer[20];
 	char* primeiro = malloc(sizeof(char) * 10);
 	char* segundo = malloc(sizeof(char) * 10);
@@ -132,8 +184,10 @@ int main(){
 				  break;
 		case 'n': alteraNome(atoi(segundo),terceiro);
 				  break;
-		case 'p':
+		case 'p': alteraPreco(atoi(segundo),atof(terceiro));
 				  break;
+		//case 's': testastrings(atoi(segundo));
+		//		  break;
 		default: perror("Demasiados argumentos"); exit(-1);
 	}
 
