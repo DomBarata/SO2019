@@ -9,7 +9,6 @@ struct artigo
 	int cod;
 	double preco;
 	int tamanhoStr;
-	int strPos;
 };
 typedef struct artigo* mArtigo;
 
@@ -27,8 +26,6 @@ int main(int argc, char const *argv[])
 	mArtigo forWrite = malloc(sizeof(struct artigo));
 	mStock varStock = malloc(sizeof(struct stock));
 
-
-	forWrite->strPos = 0;
 
 	fArt = open("ARTIGOS", O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	fStr = open("STRINGS", O_WRONLY | O_CREAT | O_TRUNC, 0600);
@@ -122,11 +119,32 @@ int main(int argc, char const *argv[])
 
 
 		write(fArt, forWrite, sizeof(struct artigo));
-		write(fStr, str, sizeof(str));
+		write(fStr, str, 32);
 		write(fStk, varStock, sizeof(struct stock));
 
-		forWrite->strPos += forWrite->tamanhoStr;
 		printf("%d\n", i);
 	}
 	return 0;
+}
+
+
+
+//funcao de teste de strings
+void testastrings(char* string/*que tem 32 de memoria alocada*/, int codigo)
+{
+	int f, fd;
+	mArtigo estrutura = malloc(sizeof(struct artigo));
+
+	f = open("STRINGS", O_RDONLY);
+	fd = open("ARTIGOS", O_RDONLY);
+
+	lseek (fd, (codigo-1)*sizeof(struct artigo), SEEK_SET);
+
+	read(fd,estrutura,sizeof(struct artigo));
+
+	lseek (f, 32 * estrutura->cod, SEEK_SET);
+
+	read(f,string,estrutura->tamanhoStr);
+
+	printf("%s\n", string);
 }
