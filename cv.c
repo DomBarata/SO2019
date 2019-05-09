@@ -80,15 +80,16 @@ int main()
 	//	clientFIFO[i]  = 0;
 	//alternativa
 	memset(clientFIFO, 0, 100);
-	
 
 	snprintf(clientFIFO, 100, "/tmp/so_%d", getpid());
 		if(access(clientFIFO, R_OK) == -1){
-			if(mkfifo(clientFIFO, 0622) != 0){
+			if(mkfifo(clientFIFO, 0666) != 0){
 				perror("criacao fifo client");
 				exit(-1);
 			}
 		}
+		
+	
 
 	while(1){
 		argc = 0;
@@ -108,6 +109,9 @@ int main()
 			perror("acesso escrita fifo server");
 			exit(-1);
 		}
+		
+		memset(messageToServer,0,MAX);
+		memset(messageFromServer,0,MAX);
 
 		switch(argc){
 			case 0:
@@ -120,11 +124,11 @@ int main()
 
 		if(!res)
 		{
-			toServer = open(FIFO, O_WRONLY);
+			toServer = open(FIFO, O_WRONLY,  O_NONBLOCK);
 			write(toServer,messageToServer,strlen(messageToServer));
 			close(toServer);
 
-			fromServer = open(clientFIFO, O_RDONLY);
+			fromServer = open(clientFIFO, O_RDONLY,  O_NONBLOCK);
 			read(fromServer, messageFromServer, MAX);
 			close(fromServer);
 
@@ -132,5 +136,6 @@ int main()
 			write(1,"\n",1);
 		}
 	}
+	
 	return 0;
 }

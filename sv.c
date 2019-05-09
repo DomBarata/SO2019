@@ -122,11 +122,15 @@ int main()
 	
 
 	if(access(FIFO, R_OK) == -1){
-		if(mkfifo(FIFO, 0644) != 0){
+		if(mkfifo(FIFO, 0666) != 0){
 			perror("criacao fifo server");
 			exit(-1);
 		}
 	}
+
+	//signal(SIGINT,);
+
+	
 
 	while(1){
 		//for (int i = 0; i < MAX; ++i)
@@ -139,11 +143,15 @@ int main()
 		memset(messageFromClient, 0, MAX);
 		memset(messageToClient, 0, MAX);
 		
-		fromClient = open(FIFO, O_RDONLY);
-		read(fromClient, messageFromClient,MAX);
+
+		fromClient = open(FIFO, O_RDONLY,  O_NONBLOCK);
+		while(!strlen(messageFromClient)){
+			read(fromClient, messageFromClient,MAX);
+		}
 		close(fromClient);
 		
 		clientFIFO = strtok(messageFromClient, ";");
+		
 		if(access(clientFIFO, W_OK) == -1)
 		{
 			perror("acesso fifo client");
@@ -165,12 +173,13 @@ int main()
 			default: perror("Demasiados argumentos"); exit(-1);
 		}
 
-		if((toClient = open(clientFIFO, O_WRONLY)) == -1){
+		if((toClient = open(clientFIFO, O_WRONLY,  O_NONBLOCK)) == -1){
 			perror("abertura fifo");
 			exit(-1);
 		}
 		write(toClient, messageToClient, MAX);
 		close(toClient);
 	}
+
 	return 0;
 }
