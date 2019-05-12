@@ -76,7 +76,7 @@ void atualiza(int codigo, int quantidade, char* messageToClient)
 		if(quantidade < 0)
 		{
 			int fVendas, fArt;
-			mVenda venda = malloc(sizeof(struct venda));
+			char* venda;
 			mArtigo artigo = malloc(sizeof(struct artigo));
 
 			if((fArt = open("ARTIGOS", O_RDWR)) == -1){
@@ -86,17 +86,15 @@ void atualiza(int codigo, int quantidade, char* messageToClient)
 			lseek(fArt, sizeof(struct artigo)*(codigo-1), SEEK_SET);
 			read(fArt, artigo, sizeof(struct artigo));
 			close(fArt);
-
-			venda->cod = codigo;
-			venda->qtd = -quantidade;
-			venda->montante = (venda->qtd)*(artigo->preco);
+			
+			snprintf(venda, MAX, "%d %d %f", codigo, -quantidade, (-quantidade)*(artigo->preco));
 			
 			if((fVendas = open("VENDAS", O_WRONLY)) == -1){
 				perror("open");
 				exit(-1);
 			}
 			lseek(fVendas,0,SEEK_END);
-			write(fVendas, venda, sizeof(struct venda));
+			write(fVendas, venda, strlen(venda));
 			close(fVendas);
 		}
 
