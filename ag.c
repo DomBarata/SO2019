@@ -10,58 +10,104 @@
 #include <time.h>
 
 #define MAX 512
-#define FIFO "/tmp/so"
+#define BUFFERSIZE 50
 
 struct venda
 {
-	int cod;
 	int qtd;
-	double montante;
+	double preco;
 };
-typedef struct venda* mVenda;
+typedef struct venda* Venda;
+
+struct artigo
+{
+	int cod;
+	double preco;
+	int tamanhoStr;
+};
+typedef struct artigo* mArtigo;
+
+ssize_t readln (int fd, void *buf, size_t nbyte) {
+    nbyte--;
+    char *cbuf = (char*) buf;
+    int i;
+    int rd = 1;
+    off_t foundnl = 0;
+
+    rd = read (fd, cbuf, nbyte);
+
+    for (i = 0; i < rd; i++)
+        if (cbuf[i] == '\n'){
+            foundnl = 1;
+            break;
+        }
+
+    cbuf[i] = 0;
+
+    lseek (fd, (i - rd) + foundnl, SEEK_CUR);
+    return (foundnl == 1 ? i : -i);
+}
 
 int main(){
+	int f, i, aux;
+	int codigo, quantidade;
+	double preco;
+	char buffer[BUFFERSIZE];
+	char* strAux = malloc(sizeof(char) * 20);
+	const time_t timer = time(NULL);
+	Venda* arrayVendas;
+	mArtigo artg = malloc(sizeof(struct artigo));
 
-	char* linhaVenda = malloc(sizeof(char*)*MAX);
-	mVenda* venda = malloc(sizeof(struct venda)*MAX);
-	mVenda vendaAux = malloc(sizeof(struct venda));
-	char* vendaAg = malloc(sizeof(char*)*MAX);
-	int flag=0, i=1, j=0, k=0;
-	time_t now;
-	struct tm *mytime = localtime(&now); 
-
-	read(0, linhaVenda, MAX);
-	do{
-		vendaAux->cod = atoi(strtok(linhaVenda, " "));
-		vendaAux->qtd = atoi(strtok(NULL, " "));
-		vendaAux->montante = atof(strtok(NULL, " "));
-
-		flag = 0;
-		for(j=0; j<(i-1); j++){
-			if(venda[j] != NULL && vendaAux->cod == venda[j]->cod)
-			{
-				venda[j]->qtd += vendaAux->qtd;
-				venda[j]->montante += venda[j]->montante;
-				flag = 1;
-				j=i-1;
-			}
-		i++;
-		}
-		if(flag == 0)
-		{
-			venda[i-1]->cod = vendaAux->cod;
-			venda[i-1]->qtd = vendaAux->qtd;
-			venda[i-1]->montante = vendaAux->montante; 
-		}
-	}while(read(0, linhaVenda, MAX) != 1);
-
-	for (int k = 0; k < (i-1); k++)
+	if((f = open("ARTIGOS", O_RDONLY)) == -1)
 	{
-		snprintf(vendaAg, MAX, "%d %d %f", venda[k]->cod, venda[k]->qtd, venda[k]->montante);
-		write(1,vendaAg, strlen(vendaAg));
+		perror("open artigos");
+		exit(-1);
+	}
+ 	lseek (f, -sizeof(struct artigo), SEEK_END);
+ 	read(f, artg, sizeof(struct artigo));
+ 	close(f);
+
+ 	arrayVendas = (Venda*)malloc(sizeof(struct venda*) * artg->cod);
+ 	for (i = 0; i < artg->cod; ++i)
+ 	{
+ 		arrayVendas[i] = malloc(sizeof(struct venda));
+ 		arrayVendas[i]->qtd = 0;
+ 		arrayVendas[i]->preco = 0;
+ 	}
+	
+	while(1){		
+		fgets(buffer, BUFFERSIZE, stdin);
+
+		if(buffer[0] = '\n') break;
+
+		strAux = strtok(buffer, " ");
+		codigo = atoi(strAux);
+		strAux = strtok(NULL, " ");
+		quantidade = atoi(strAux);
+		strAux = strtok(NULL, " ");
+		preco = atof(strAux);
+		
+		arrayVendas[codigo-1]->qtd += quantidade;
+		arrayVendas[codigo-1]->preco += preco;	
 	}
 
-//snprintf(nomeFich, MAX, "%d-%d-%dT%d:%d:%d", mytime->tm_year+1900, mytime->tm_mon+1, mytime->tm_mday, mytime->tm_hour, mytime->tm_min, mytime->tm_sec);
+	if((f = open(ctime(&timer), O_CREAT)) == -1)
+		{
+			perror("criar timer");
+			exit(-1);
+		}
 
-//fAg = open(nomeFich, O_CREAT, O_WRONLY);	
+		i = 0;
+		while(i < artg->cod)
+		{
+			if (arrayVendas[i]->qtd)
+			{
+				aux = i + 1;
+				write(f, &aux, sizeof(int));
+				write(f, arrayVendas[i], sizeof(struct venda));
+			}
+		}
+		close(f);
+	
+	return 0;	
 }
