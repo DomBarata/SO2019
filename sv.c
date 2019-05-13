@@ -36,8 +36,9 @@ typedef struct stock* mStock;
 
 void show(int codigo, char* messageToClient) {
 	
-	int f;
-	mStock estrutura = malloc(sizeof(struct stock));
+	int f, fArt;
+	mStock stock = malloc(sizeof(struct stock));
+	mArtigo artigo = malloc(sizeof(struct artigo));
 	if((f = open("STOCKS", O_RDONLY)) == -1)
 	{
 		perror("open");
@@ -45,15 +46,28 @@ void show(int codigo, char* messageToClient) {
 	}
 	
 	lseek(f, sizeof(struct stock) * (codigo-1), SEEK_CUR);
-	read(f,estrutura,sizeof(struct stock));
+	read(f,stock,sizeof(struct stock));
 	close(f);
 
-	snprintf(messageToClient, MAX, "Quantidade em stock: %d", estrutura->qtd);
+	if((fArt = open("ARTIGOS", O_RDWR)) == -1)
+	{
+		perror("open");
+		exit(-1);
+	}
+
+	lseek(fArt, (codigo-1)*sizeof(struct artigo), SEEK_SET);
+	read(fArt, artigo, sizeof(struct artigo));
+	close(fArt);
+
+	snprintf(messageToClient, MAX, "Stock: %d -- Preço: %f", stock->qtd, artigo->preco);
 }
 
 void atualiza(int codigo, int quantidade, char* messageToClient)
 {
 	int f;
+	int fVendas, fArt;
+	char* venda;
+	mArtigo artigo = malloc(sizeof(struct artigo));
 	mStock estrutura = malloc(sizeof(struct stock));
 	
 	if((f = open("STOCKS", O_RDWR)) == -1)
@@ -75,10 +89,6 @@ void atualiza(int codigo, int quantidade, char* messageToClient)
 
 		if(quantidade < 0)
 		{
-			int fVendas, fArt;
-			char* venda;
-			mArtigo artigo = malloc(sizeof(struct artigo));
-
 			if((fArt = open("ARTIGOS", O_RDWR)) == -1){
 				perror("open");
 				exit(-1);
@@ -143,10 +153,12 @@ int main()
 		
 
 		fromClient = open(FIFO, O_RDONLY,  O_NONBLOCK);
+		dup2(fromClient,1);
 		while(!strlen(messageFromClient)){
-			read(fromClient, messageFromClient,MAX);
+			read(1, messageFromClient,MAX);
 		}
 		close(fromClient);
+		printf("%s\n", messageFromClient);
 		
 		clientFIFO = strtok(messageFromClient, ";");
 		
