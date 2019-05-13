@@ -66,7 +66,7 @@ void atualiza(int codigo, int quantidade, char* messageToClient)
 {
 	int f;
 	int fVendas, fArt;
-	char* venda;
+	char* venda = malloc(sizeof(char*)*MAX);
 	mArtigo artigo = malloc(sizeof(struct artigo));
 	mStock estrutura = malloc(sizeof(struct stock));
 	
@@ -153,12 +153,10 @@ int main()
 		
 
 		fromClient = open(FIFO, O_RDONLY,  O_NONBLOCK);
-		dup2(fromClient,1);
 		while(!strlen(messageFromClient)){
-			read(1, messageFromClient,MAX);
+			read(fromClient, messageFromClient,MAX);
 		}
 		close(fromClient);
-		printf("%s\n", messageFromClient);
 		
 		clientFIFO = strtok(messageFromClient, ";");
 		
