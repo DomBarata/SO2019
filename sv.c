@@ -97,7 +97,7 @@ void atualiza(int codigo, int quantidade, char* messageToClient)
 			read(fArt, artigo, sizeof(struct artigo));
 			close(fArt);
 			
-			snprintf(venda, MAX, "%d %d %f", codigo, -quantidade, (-quantidade)*(artigo->preco));
+			snprintf(venda, MAX, "%d %d %f\n", codigo, -quantidade, (-quantidade)*(artigo->preco));
 			
 			if((fVendas = open("VENDAS", O_WRONLY)) == -1){
 				perror("open");
