@@ -15,14 +15,14 @@
 struct venda
 {
 	int qtd;
-	double preco;
+	double montante;
 };
 typedef struct venda* Venda;
 
 struct artigo
 {
 	int cod;
-	double preco;
+	double montante;
 	int tamanhoStr;
 };
 typedef struct artigo* mArtigo;
@@ -51,7 +51,7 @@ ssize_t readln (int fd, void *buf, size_t nbyte) {
 int main(){
 	int f, i, aux;
 	int codigo, quantidade;
-	double preco;
+	double montante;
 	char buffer[BUFFERSIZE];
 	char* strAux = malloc(sizeof(char) * 20);
 	const time_t timer = time(NULL);
@@ -72,28 +72,28 @@ int main(){
  	{
  		arrayVendas[i] = malloc(sizeof(struct venda));
  		arrayVendas[i]->qtd = 0;
- 		arrayVendas[i]->preco = 0;
+ 		arrayVendas[i]->montante = 0;
  	}
 	
 	while(1){		
-		fgets(buffer, BUFFERSIZE, stdin);
+		readln (0, buffer, BUFFERSIZE);
 
-		if(buffer[0] = '\n') break;
+		if(strlen(buffer) == 0) break;
 
 		strAux = strtok(buffer, " ");
 		codigo = atoi(strAux);
 		strAux = strtok(NULL, " ");
 		quantidade = atoi(strAux);
 		strAux = strtok(NULL, " ");
-		preco = atof(strAux);
+		montante = atof(strAux);
 		
 		arrayVendas[codigo-1]->qtd += quantidade;
-		arrayVendas[codigo-1]->preco += preco;	
+		arrayVendas[codigo-1]->montante += montante;
 	}
 
-	if((f = open(ctime(&timer), O_CREAT)) == -1)
+	if((f = open(ctime(&timer), O_CREAT	| O_RDWR, 0666)) == -1)
 		{
-			perror("criar timer");
+			perror("criar agregador");
 			exit(-1);
 		}
 
@@ -106,8 +106,11 @@ int main(){
 				write(f, &aux, sizeof(int));
 				write(f, arrayVendas[i], sizeof(struct venda));
 			}
+			i++;
 		}
 		close(f);
+		free(artg);
+		free(arrayVendas);
 	
 	return 0;	
 }
