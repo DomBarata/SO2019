@@ -68,11 +68,7 @@ int insere(char* nome, double preco){
 	}
 	write(fStk, stock, sizeof(struct stock));
 	close(fStk);
-
-	printf("cod %d\n",artigo->cod);
-	printf("preco %f\n",artigo->preco);
-	printf("tam %d\n",artigo->tamanhoStr);
-
+	
 	return artigo->cod;
 }
 
